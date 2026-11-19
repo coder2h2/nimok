@@ -42,7 +42,7 @@ sudo chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no
   pipewire pipewire-pulse wireplumber \
   plasma-desktop kwin-wayland sddm konsole dolphin kate \
   calamares parted dosfstools e2fsprogs btrfs-progs efibootmgr \
-  squashfs-tools live-boot initramfs-tools \
+  squashfs-tools zstd live-boot initramfs-tools \
   git curl build-essential python3 nodejs npm nano
 
 # 3. Install kernel (pre-compiled from repo on amd64, via apt on arm64)
@@ -105,8 +105,6 @@ sudo chmod +x "$ROOTFS/home/nimok/Desktop/install-nimok.desktop"
 sudo chroot "$ROOTFS" chown -R nimok:nimok /home/nimok
 
 # 5. Generate initramfs and pack bootable ISO
-sudo mkdir -p "$ROOTFS/lib/udev"
-sudo ln -sf /usr/lib/udev/*_id "$ROOTFS/lib/udev/" 2>/dev/null || true
 sudo chroot "$ROOTFS" update-initramfs -c -k "$K_VER"
 sudo umount "$ROOTFS/dev" "$ROOTFS/proc" "$ROOTFS/sys"
 
