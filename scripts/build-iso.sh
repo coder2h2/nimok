@@ -51,7 +51,8 @@ if [ "$ARCH" = "amd64" ]; then
   sudo apt-get install -y grub-pc-bin grub-efi-amd64-bin
   sudo chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends grub-pc-bin grub-efi-amd64-bin
   sudo cp "$REPO_DIR/kernel/amd64/vmlinuz-7.3.5-nimok" "$ROOTFS/boot/vmlinuz-7.3.5-nimok"
-  sudo tar -xf "$REPO_DIR/kernel/amd64/modules-7.3.5-nimok.tar.xz" -C "$ROOTFS/"
+  sudo cp "$REPO_DIR/configs/kernel-7.3.5-nimok.config" "$ROOTFS/boot/config-7.3.5-nimok"
+  sudo tar -xf "$REPO_DIR/kernel/amd64/modules-7.3.5-nimok.tar.xz" -C "$ROOTFS/usr/"
   K_VER="7.3.5-nimok"
 else
   sudo apt-get install -y grub-efi-arm64-bin
