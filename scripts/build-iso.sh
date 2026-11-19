@@ -105,6 +105,8 @@ sudo chmod +x "$ROOTFS/home/nimok/Desktop/install-nimok.desktop"
 sudo chroot "$ROOTFS" chown -R nimok:nimok /home/nimok
 
 # 5. Generate initramfs and pack bootable ISO
+sudo mkdir -p "$ROOTFS/lib/udev"
+sudo ln -sf /usr/lib/udev/*_id "$ROOTFS/lib/udev/" 2>/dev/null || true
 sudo chroot "$ROOTFS" update-initramfs -c -k "$K_VER"
 sudo umount "$ROOTFS/dev" "$ROOTFS/proc" "$ROOTFS/sys"
 
