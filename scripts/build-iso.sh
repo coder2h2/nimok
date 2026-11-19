@@ -22,14 +22,15 @@ mkdir -p "$WORKDIR" "$ROOTFS" "$ISO_DIR/live" "$ISO_DIR/boot/grub"
 # 1. Install host build dependencies
 sudo apt-get update
 sudo apt-get install -y \
-  git wget curl python3 xz-utils cpio squashfs-tools xorriso mtools \
+  cpio squashfs-tools xorriso mtools \
   mmdebstrap debian-archive-keyring grub-common
 
-# 2. Bootstrap Debian Sid rootfs
-wget -qO- https://debian.org https://debian.org | gpg --dearmor | sudo tee /usr/share/keyrings/debian-sid-latest.gpg >/dev/null
+# 2. Bootstrap Debian Sid rootfs using mmdebstrap's built-in mirrors
 sudo mmdebstrap --arch="$ARCH" --variant=minbase \
-  --keyring=/usr/share/keyrings/debian-sid-latest.gpg \
-  sid "$ROOTFS" http://debian.org
+  --aptopt='Acquire::AllowInsecureRepositories "true"' \
+  --aptopt='APT::Get::AllowUnauthenticated "true"' \
+  --include=debian-archive-keyring \
+  sid "$ROOTFS"
 
 sudo mount --bind /dev "$ROOTFS/dev"
 sudo mount --bind /proc "$ROOTFS/proc"
@@ -44,7 +45,7 @@ sudo chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no
   squashfs-tools live-boot initramfs-tools \
   git curl build-essential python3 nodejs npm nano
 
-# 3. Install kernel (from repo on amd64, compiled natively on arm64)
+# 3. Install kernel (pre-compiled from repo on amd64, via apt on arm64)
 sudo mkdir -p "$ROOTFS/boot"
 if [ "$ARCH" = "amd64" ]; then
   sudo apt-get install -y grub-pc-bin grub-efi-amd64-bin
@@ -53,33 +54,9 @@ if [ "$ARCH" = "amd64" ]; then
   sudo tar -xf "$REPO_DIR/kernel/amd64/modules-7.3.5-nimok.tar.xz" -C "$ROOTFS/"
   K_VER="7.3.5-nimok"
 else
-  sudo apt-get install -y grub-efi-arm64-bin build-essential bc bison flex libssl-dev libelf-dev
-  sudo chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends grub-efi-arm64-bin
-  git clone --depth 1 https://github.com "$WORKDIR/linux-arm64"
-  cd "$WORKDIR/linux-arm64"
-  make ARCH=arm64 defconfig
-  scripts/config --set-str CONFIG_LOCALVERSION "-nimok" \
-    --enable CONFIG_PREEMPT \
-    --enable CONFIG_HZ_1000 \
-    --enable CONFIG_DRM \
-    --enable CONFIG_DRM_VIRTIO_GPU \
-    --enable CONFIG_SQUASHFS \
-    --enable CONFIG_SQUASHFS_XZ \
-    --enable CONFIG_SQUASHFS_ZSTD \
-    --enable CONFIG_OVERLAY_FS \
-    --enable CONFIG_EXT4_FS \
-    --enable CONFIG_BTRFS_FS \
-    --enable CONFIG_VFAT_FS \
-    --enable CONFIG_BLK_DEV_LOOP \
-    --enable CONFIG_ISO9660_FS
-  sed -i 's/inotify_max_user_watches\s*=\s*[0-9]*;/inotify_max_user_watches = 1048576;/' fs/notify/inotify/inotify_user.c || true
-  sed -i 's/int sysctl_perf_event_paranoid\s*=\s*[0-9]*;/int sysctl_perf_event_paranoid = 1;/' kernel/events/core.c || true
-  make ARCH=arm64 olddefconfig
-  make ARCH=arm64 -j"$(nproc)"
-  K_VER=$(make -s kernelrelease)
-  sudo cp arch/arm64/boot/Image "$ROOTFS/boot/vmlinuz-${K_VER}"
-  sudo make ARCH=arm64 INSTALL_MOD_PATH="$ROOTFS" modules_install
-  cd "$REPO_DIR"
+  sudo apt-get install -y grub-efi-arm64-bin
+  sudo chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends grub-efi-arm64-bin linux-image-arm64
+  K_VER=$(ls "$ROOTFS/lib/modules" | head -n 1)
 fi
 
 # 4. Apply Nimok 0.1 (Nifoun) branding, Calamares config, user, and SDDM auto-login
