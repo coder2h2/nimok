@@ -93,7 +93,7 @@ fi
 sudo mkdir -p "$ROOTFS/usr/share/pixmaps" "$ROOTFS/usr/share/icons/hicolor/256x256/apps" "$ROOTFS/etc/calamares/branding/nimok" "$ROOTFS/etc/sddm.conf.d"
 sudo cp "$OLDPWD/assets/nimok-logo.png" "$ROOTFS/usr/share/pixmaps/nimok-logo.png"
 sudo cp "$OLDPWD/assets/nimok-logo.png" "$ROOTFS/usr/share/icons/hicolor/256x256/apps/nimok.png"
-sudo cp "$OLDPWD/assets/nimok-logo.png" "$ROOTFS/etc/calamares/branding/nimok/nimok-logo.png"
+sudo cp -r "$OLDPWD/calamares/"* "$ROOTFS/etc/calamares/"
 
 sudo bash -c "cat << 'EOT' > '$ROOTFS/etc/os-release'
 NAME=\"Nimok\"
