@@ -1,0 +1,8 @@
+sources/
+build/
+rootfs/
+iso/
+vmlinuz
+initramfs.cpio.gz
+*.iso
+*.qcow2
