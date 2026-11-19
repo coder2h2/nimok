@@ -26,8 +26,9 @@ sudo apt-get install -y \
   mmdebstrap debian-archive-keyring grub-common
 
 # 2. Bootstrap Debian Sid rootfs
+wget -qO- https://debian.org https://debian.org | gpg --dearmor | sudo tee /usr/share/keyrings/debian-sid-latest.gpg >/dev/null
 sudo mmdebstrap --arch="$ARCH" --variant=minbase \
-  --keyring=/usr/share/keyrings/debian-archive-keyring.gpg \
+  --keyring=/usr/share/keyrings/debian-sid-latest.gpg \
   sid "$ROOTFS" http://debian.org
 
 sudo mount --bind /dev "$ROOTFS/dev"
