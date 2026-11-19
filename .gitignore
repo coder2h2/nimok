@@ -6,3 +6,4 @@ vmlinuz
 initramfs.cpio.gz
 *.iso
 *.qcow2
+*.tar.xz
