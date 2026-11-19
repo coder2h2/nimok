@@ -30,7 +30,7 @@ sudo mmdebstrap --arch="$ARCH" --variant=minbase \
   --aptopt='Acquire::AllowInsecureRepositories "true"' \
   --aptopt='APT::Get::AllowUnauthenticated "true"' \
   --include=debian-archive-keyring \
-  sid "$ROOTFS"
+  testing "$ROOTFS"
 
 sudo mount --bind /dev "$ROOTFS/dev"
 sudo mount --bind /proc "$ROOTFS/proc"
