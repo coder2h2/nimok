@@ -6,23 +6,15 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://gnu.org>.
 
 set -euo pipefail
 
 ARCH="${1:-amd64}"
-KERNEL_VER="7.3.5"
-WORKDIR="$PWD/work-$ARCH"
+REPO_DIR="$PWD"
+WORKDIR="$REPO_DIR/work-$ARCH"
 ROOTFS="$WORKDIR/rootfs"
 ISO_DIR="$WORKDIR/iso"
-OUT_ISO="$PWD/nimok-0.1-nifoun-${ARCH}.iso"
+OUT_ISO="$REPO_DIR/nimok-0.1-nifoun-${ARCH}.iso"
 
 echo "=== Building Nimok Linux 0.1 (Nifoun) for $ARCH ==="
 mkdir -p "$WORKDIR" "$ROOTFS" "$ISO_DIR/live" "$ISO_DIR/boot/grub"
@@ -30,42 +22,46 @@ mkdir -p "$WORKDIR" "$ROOTFS" "$ISO_DIR/live" "$ISO_DIR/boot/grub"
 # 1. Install host build dependencies
 sudo apt-get update
 sudo apt-get install -y \
-  build-essential bc bison flex libssl-dev libelf-dev dwarves \
-  wget xz-utils cpio squashfs-tools xorriso mtools \
-  mmdebstrap qemu-user-static grub-common
+  git wget curl python3 xz-utils cpio squashfs-tools xorriso mtools \
+  mmdebstrap debian-archive-keyring grub-common
 
+# 2. Bootstrap Debian Sid rootfs
+sudo mmdebstrap --arch="$ARCH" --variant=minbase \
+  --keyring=/usr/share/keyrings/debian-archive-keyring.gpg \
+  sid "$ROOTFS" http://debian.org
+
+sudo mount --bind /dev "$ROOTFS/dev"
+sudo mount --bind /proc "$ROOTFS/proc"
+sudo mount --bind /sys "$ROOTFS/sys"
+
+sudo chroot "$ROOTFS" apt-get update
+sudo chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  systemd-sysv udev dbus network-manager sudo locales ca-certificates \
+  pipewire pipewire-pulse wireplumber \
+  plasma-desktop kwin-wayland sddm konsole dolphin kate \
+  calamares parted dosfstools e2fsprogs btrfs-progs efibootmgr \
+  squashfs-tools live-boot initramfs-tools \
+  git curl build-essential python3 nodejs npm nano
+
+# 3. Install kernel (from repo on amd64, compiled natively on arm64)
+sudo mkdir -p "$ROOTFS/boot"
 if [ "$ARCH" = "amd64" ]; then
   sudo apt-get install -y grub-pc-bin grub-efi-amd64-bin
-  K_ARCH="x86_64"
-  K_IMAGE="arch/x86/boot/bzImage"
+  sudo chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends grub-pc-bin grub-efi-amd64-bin
+  sudo cp "$REPO_DIR/kernel/amd64/vmlinuz-7.3.5-nimok" "$ROOTFS/boot/vmlinuz-7.3.5-nimok"
+  sudo tar -xf "$REPO_DIR/kernel/amd64/modules-7.3.5-nimok.tar.xz" -C "$ROOTFS/"
+  K_VER="7.3.5-nimok"
 else
-  sudo apt-get install -y grub-efi-arm64-bin
-  K_ARCH="arm64"
-  K_IMAGE="arch/arm64/boot/Image"
-fi
-
-# 2. Download, patch, and compile Linux 7.3.5-nimok kernel
-cd "$WORKDIR"
-wget -q "https://kernel.org{KERNEL_VER}.tar.xz"
-tar -xf "linux-${KERNEL_VER}.tar.xz"
-cd "linux-${KERNEL_VER}"
-
-for p in "$OLDPWD"/patches/*.patch; do
-  [ -f "$p" ] && patch -p1 --forward < "$p" || true
-done
-
-if [ "$ARCH" = "amd64" ] && [ -f "$OLDPWD/configs/kernel-7.3.5-nimok.config" ]; then
-  cp "$OLDPWD/configs/kernel-7.3.5-nimok.config" .config
-  make ARCH="$K_ARCH" olddefconfig
-else
-  make ARCH="$K_ARCH" defconfig
+  sudo apt-get install -y grub-efi-arm64-bin build-essential bc bison flex libssl-dev libelf-dev
+  sudo chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends grub-efi-arm64-bin
+  git clone --depth 1 https://github.com "$WORKDIR/linux-arm64"
+  cd "$WORKDIR/linux-arm64"
+  make ARCH=arm64 defconfig
   scripts/config --set-str CONFIG_LOCALVERSION "-nimok" \
     --enable CONFIG_PREEMPT \
     --enable CONFIG_HZ_1000 \
     --enable CONFIG_DRM \
     --enable CONFIG_DRM_VIRTIO_GPU \
-    --enable CONFIG_DRM_FBDEV_EMULATION \
-    --enable CONFIG_INPUT_EVDEV \
     --enable CONFIG_SQUASHFS \
     --enable CONFIG_SQUASHFS_XZ \
     --enable CONFIG_SQUASHFS_ZSTD \
@@ -75,41 +71,21 @@ else
     --enable CONFIG_VFAT_FS \
     --enable CONFIG_BLK_DEV_LOOP \
     --enable CONFIG_ISO9660_FS
-  make ARCH="$K_ARCH" olddefconfig
+  sed -i 's/inotify_max_user_watches\s*=\s*[0-9]*;/inotify_max_user_watches = 1048576;/' fs/notify/inotify/inotify_user.c || true
+  sed -i 's/int sysctl_perf_event_paranoid\s*=\s*[0-9]*;/int sysctl_perf_event_paranoid = 1;/' kernel/events/core.c || true
+  make ARCH=arm64 olddefconfig
+  make ARCH=arm64 -j"$(nproc)"
+  K_VER=$(make -s kernelrelease)
+  sudo cp arch/arm64/boot/Image "$ROOTFS/boot/vmlinuz-${K_VER}"
+  sudo make ARCH=arm64 INSTALL_MOD_PATH="$ROOTFS" modules_install
+  cd "$REPO_DIR"
 fi
 
-make ARCH="$K_ARCH" -j"$(nproc)"
-sudo mkdir -p "$ROOTFS/boot"
-sudo cp "$K_IMAGE" "$ROOTFS/boot/vmlinuz-${KERNEL_VER}-nimok"
-sudo make ARCH="$K_ARCH" INSTALL_MOD_PATH="$ROOTFS" modules_install
-
-# 3. Bootstrap Debian Sid rootfs with KDE Plasma, Calamares, and Coding tools
-sudo mmdebstrap --arch="$ARCH" --variant=minbase sid "$ROOTFS" http://debian.org
-
-sudo mount --bind /dev "$ROOTFS/dev"
-sudo mount --bind /proc "$ROOTFS/proc"
-sudo mount --bind /sys "$ROOTFS/sys"
-
-sudo chroot "$ROOTFS" apt-get update
-sudo chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  systemd-sysv udev dbus network-manager sudo locales \
-  pipewire pipewire-pulse wireplumber \
-  plasma-desktop kwin-wayland sddm konsole dolphin kate \
-  calamares parted dosfstools e2fsprogs btrfs-progs efibootmgr \
-  squashfs-tools live-boot initramfs-tools \
-  git curl ca-certificates build-essential python3 nodejs npm nano
-
-if [ "$ARCH" = "amd64" ]; then
-  sudo chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get install -y grub-pc-bin grub-efi-amd64-bin
-else
-  sudo chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get install -y grub-efi-arm64-bin
-fi
-
-# 4. Apply Nimok 0.1 (Nifoun) branding, logo, user, and SDDM auto-login
-sudo mkdir -p "$ROOTFS/usr/share/pixmaps" "$ROOTFS/usr/share/icons/hicolor/256x256/apps" "$ROOTFS/etc/calamares/branding/nimok" "$ROOTFS/etc/sddm.conf.d"
-sudo cp "$OLDPWD/assets/nimok-logo.png" "$ROOTFS/usr/share/pixmaps/nimok-logo.png"
-sudo cp "$OLDPWD/assets/nimok-logo.png" "$ROOTFS/usr/share/icons/hicolor/256x256/apps/nimok.png"
-sudo cp -r "$OLDPWD/calamares/"* "$ROOTFS/etc/calamares/"
+# 4. Apply Nimok 0.1 (Nifoun) branding, Calamares config, user, and SDDM auto-login
+sudo mkdir -p "$ROOTFS/usr/share/pixmaps" "$ROOTFS/usr/share/icons/hicolor/256x256/apps" "$ROOTFS/etc/calamares" "$ROOTFS/etc/sddm.conf.d"
+sudo cp "$REPO_DIR/assets/nimok-logo.png" "$ROOTFS/usr/share/pixmaps/nimok-logo.png"
+sudo cp "$REPO_DIR/assets/nimok-logo.png" "$ROOTFS/usr/share/icons/hicolor/256x256/apps/nimok.png"
+sudo cp -r "$REPO_DIR/calamares/"* "$ROOTFS/etc/calamares/"
 
 sudo bash -c "cat << 'EOT' > '$ROOTFS/etc/os-release'
 NAME=\"Nimok\"
@@ -151,12 +127,12 @@ sudo chmod +x "$ROOTFS/home/nimok/Desktop/install-nimok.desktop"
 sudo chroot "$ROOTFS" chown -R nimok:nimok /home/nimok
 
 # 5. Generate initramfs and pack bootable ISO
-sudo chroot "$ROOTFS" update-initramfs -c -k "${KERNEL_VER}-nimok"
+sudo chroot "$ROOTFS" update-initramfs -c -k "$K_VER"
 sudo umount "$ROOTFS/dev" "$ROOTFS/proc" "$ROOTFS/sys"
 
 sudo mksquashfs "$ROOTFS" "$ISO_DIR/live/filesystem.squashfs" -comp zstd -Xcompression-level 15
-sudo cp "$ROOTFS/boot/vmlinuz-${KERNEL_VER}-nimok" "$ISO_DIR/boot/vmlinuz"
-sudo cp "$ROOTFS/boot/initrd.img-${KERNEL_VER}-nimok" "$ISO_DIR/boot/initrd.img"
+sudo cp "$ROOTFS/boot/vmlinuz-${K_VER}" "$ISO_DIR/boot/vmlinuz"
+sudo cp "$ROOTFS/boot/initrd.img-${K_VER}" "$ISO_DIR/boot/initrd.img"
 
 cat << 'EOT' > "$ISO_DIR/boot/grub/grub.cfg"
 set timeout=5
