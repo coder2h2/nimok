@@ -1,0 +1,28 @@
+Package: nimok-branding
+Version: 0.2.0
+Architecture: all
+Maintainer: Gideon Laurie <coder2h2@://github.com>
+Depends: breeze-icon-theme, systemsettings, plasma-discover
+Filename: ./nimok-branding_0.2.0_all.deb
+Size: 59294
+MD5sum: 7ecb6ea155d2324dcdb2ed1defe32c77
+SHA1: 6eead9b86e01af5cf5bfdc28178e85db021a103d
+SHA256: d763dcf8c59b16c2300ff950ef44a8114487af7cbace09a338d43e8ea8582485
+Section: misc
+Priority: optional
+Description: Official logos, icon theme, and Calamares branding for Nimok Linux
+
+Package: nimok-welcome
+Version: 0.2.0
+Architecture: all
+Maintainer: Gideon Laurie <coder2h2@://github.com>
+Depends: python3, python3-pyqt6, konsole, xdg-utils, firefox-esr
+Filename: ./nimok-welcome_0.2.0_all.deb
+Size: 2356
+MD5sum: dbfaa333c462d50e7adf150f09c7c3e6
+SHA1: cbe1b5ed0ec0273b129f595dc327aaa10fa579a0
+SHA256: e8ab0e01b65d7a8d40c17d1f7f9977ce99d30651e6cbddee5ebe6d1cb24a5429
+Section: misc
+Priority: optional
+Description: Welcome and quick-setup application for Nimok Linux
+

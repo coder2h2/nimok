@@ -1,0 +1,7 @@
+Origin: Nimok Linux
+Label: Nimok
+Suite: stable
+Codename: nifox
+Architectures: all amd64 arm64
+Components: main
+Description: Official Nimok Linux APT Repository
