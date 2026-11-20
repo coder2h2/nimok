@@ -40,7 +40,7 @@ sudo chroot "$ROOTFS" apt-get update
 sudo chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   systemd-sysv udev dbus network-manager sudo locales ca-certificates \
   pipewire pipewire-pulse wireplumber \
-  plasma-desktop kwin-wayland sddm konsole dolphin kate \
+  plasma-desktop kwin-wayland sddm konsole dolphin kate systemsettings breeze-icon-theme firefox-esr python3-pyqt6 \
   calamares parted dosfstools e2fsprogs btrfs-progs efibootmgr \
   squashfs-tools zstd live-boot initramfs-tools \
   git curl build-essential python3 nodejs npm nano
@@ -103,6 +103,22 @@ Terminal=false
 Categories=System;
 EOT"
 sudo chmod +x "$ROOTFS/home/nimok/Desktop/install-nimok.desktop"
+
+# Install Nimok Welcome app and enable autostart
+sudo cp "$REPO_DIR/apps/nimok-welcome.py" "$ROOTFS/usr/bin/nimok-welcome"
+sudo chmod +x "$ROOTFS/usr/bin/nimok-welcome"
+sudo mkdir -p "$ROOTFS/usr/share/applications" "$ROOTFS/home/nimok/.config/autostart"
+sudo bash -c "cat << 'EOT' > '$ROOTFS/usr/share/applications/nimok-welcome.desktop'
+[Desktop Entry]
+Type=Application
+Name=Nimok Welcome
+Comment=Welcome to Nimok Linux
+Exec=/usr/bin/nimok-welcome
+Icon=/usr/share/pixmaps/nimok-logo.png
+Terminal=false
+Categories=System;
+EOT"
+sudo cp "$ROOTFS/usr/share/applications/nimok-welcome.desktop" "$ROOTFS/home/nimok/.config/autostart/nimok-welcome.desktop"
 sudo chroot "$ROOTFS" chown -R nimok:nimok /home/nimok
 
 # 5. Generate initramfs and pack bootable ISO
