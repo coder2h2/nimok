@@ -1,0 +1,74 @@
+# Nimok Linux is a Linux Distro for coding and gaming
+# Copyright (C) 2026  Gideon Laurie
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+name: Build & Release Nimok ISOs (amd64 & arm64)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-iso:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout Nimok repository
+        uses: actions/checkout@v4
+
+      - name: Free up runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          df -h
+
+      - name: Build Nimok ${{ matrix.arch }} ISO
+        run: bash scripts/build-iso.sh ${{ matrix.arch }}
+
+      - name: Upload ISO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nimok-0.2-nifox-${{ matrix.arch }}-iso
+          path: nimok-0.2-nifox-${{ matrix.arch }}.iso
+
+  release:
+    needs: build-iso
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all built ISOs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: nimok-*-iso
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Nimok Linux 0.2 (Nifox)
+          body: |
+            ## Nimok Linux 0.2 (Nifox)
+            A Coding and Gaming Distro — available for both **amd64 (x86_64)** and **arm64 (aarch64)**.
+
+            - **Live Username:** `nimok`
+            - **Live Password:** `nimok`
+          files: |
+            nimok-0.2-nifox-amd64.iso
+            nimok-0.2-nifox-arm64.iso

@@ -6,10 +6,9 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
-name: Build Nimok APT Repo, Kernel & ISOs
+name: Update Nimok APT Repository
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
@@ -17,9 +16,6 @@ on:
       - '.github/**'
       - 'README.md'
       - 'LICENSE.md'
-  create:
-    tags:
-      - 'v*'
 
 permissions:
   contents: write
@@ -49,16 +45,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Free disk space & install kernel build deps
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
           sudo apt-get update
           sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev dwarves debhelper rsync kmod cpio
-
       - name: Compile patched Nimok kernel .deb
         run: bash scripts/build-kernel-deb.sh /tmp/kernel-debs
-
       - name: Upload kernel .deb artifact
         uses: actions/upload-artifact@v4
         with:
@@ -70,24 +63,19 @@ jobs:
     if: always() && (needs.build-kernel.result == 'success' || needs.build-kernel.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Nimok repository
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Install dpkg-dev
         run: sudo apt-get update && sudo apt-get install -y dpkg-dev
-
       - name: Build Nimok userspace .deb packages
         run: |
           mkdir -p /tmp/apt-repo
           bash scripts/build-debs.sh /tmp/apt-repo
-
       - name: Download new kernel .debs if built
         if: needs.build-kernel.result == 'success'
         uses: actions/download-artifact@v4
         with:
           name: nimok-kernel-debs
           path: /tmp/apt-repo
-
       - name: Preserve existing kernel .debs from apt branch
         if: needs.build-kernel.result == 'skipped'
         run: |
@@ -95,7 +83,6 @@ jobs:
           if git rev-parse --verify origin/apt >/dev/null 2>&1; then
             git archive origin/apt | tar -x -C /tmp/apt-repo linux-image-*.deb linux-headers-*.deb 2>/dev/null || true
           fi
-
       - name: Generate APT index and push to 'apt' branch
         run: |
           cd /tmp/apt-repo
@@ -110,7 +97,6 @@ jobs:
           Components: main
           Description: Official Nimok Linux APT Repository
           EOT
-
           cd "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@://github.com"
@@ -120,60 +106,3 @@ jobs:
           git add .
           git commit -m "Update Nimok APT repository"
           git push -f origin apt
-
-  build-iso:
-    needs: publish-apt-repo
-    if: github.event_name == 'create' || github.event_name == 'workflow_dispatch'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            runner: ubuntu-latest
-          - arch: arm64
-            runner: ubuntu-24.04-arm
-
-    runs-on: ${{ matrix.runner }}
-
-    steps:
-      - name: Checkout Nimok repository
-        uses: actions/checkout@v4
-
-      - name: Free up runner disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
-          df -h
-
-      - name: Build Nimok ${{ matrix.arch }} ISO
-        run: bash scripts/build-iso.sh ${{ matrix.arch }}
-
-      - name: Upload ISO Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: nimok-0.2-nifox-${{ matrix.arch }}-iso
-          path: nimok-0.2-nifox-${{ matrix.arch }}.iso
-
-  release:
-    needs: build-iso
-    if: github.event_name == 'create'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all built ISOs
-        uses: actions/download-artifact@v4
-        with:
-          pattern: nimok-*-iso
-          merge-multiple: true
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Nimok Linux 0.2 (Nifox)
-          body: |
-            ## Nimok Linux 0.2 (Nifox)
-            A Coding and Gaming Distro — available for both **amd64 (x86_64)** and **arm64 (aarch64)**.
-
-            - **Live Username:** `nimok`
-            - **Live Password:** `nimok`
-          files: |
-            nimok-0.2-nifox-amd64.iso
-            nimok-0.2-nifox-arm64.iso
