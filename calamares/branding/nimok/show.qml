@@ -47,7 +47,7 @@ Presentation {
                 anchors.top: logo1.bottom
                 anchors.topMargin: 24
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "Welcome to Nimok Linux 0.1 (Nifoun)"
+                text: "Welcome to Nimok Linux 0.2 (Nifox)"
                 color: "#cdd6f4"
                 font.pixelSize: 24
                 font.bold: true

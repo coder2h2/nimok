@@ -22,7 +22,7 @@ AUTOSTART_FILE = os.path.expanduser("~/.config/autostart/nimok-welcome.desktop")
 class NimokWelcome(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Welcome to Nimok Linux 0.1 (Nifoun)")
+        self.setWindowTitle("Welcome to Nimok Linux 0.2 (Nifox)")
         self.setFixedSize(560, 420)
         if os.path.exists("/usr/share/pixmaps/nimok-logo.png"):
             self.setWindowIcon(QIcon("/usr/share/pixmaps/nimok-logo.png"))
@@ -51,7 +51,7 @@ class NimokWelcome(QWidget):
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(logo)
 
-        title = QLabel("Welcome to Nimok Linux 0.1 (Nifoun)")
+        title = QLabel("Welcome to Nimok Linux 0.2 (Nifox)")
         title.setStyleSheet("font-size: 22px; font-weight: bold; color: #89b4fa;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)

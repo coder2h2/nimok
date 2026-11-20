@@ -14,9 +14,9 @@ REPO_DIR="$PWD"
 WORKDIR="$REPO_DIR/work-$ARCH"
 ROOTFS="$WORKDIR/rootfs"
 ISO_DIR="$WORKDIR/iso"
-OUT_ISO="$REPO_DIR/nimok-0.1-nifoun-${ARCH}.iso"
+OUT_ISO="$REPO_DIR/nimok-0.2-nifox-${ARCH}.iso"
 
-echo "=== Building Nimok Linux 0.1 (Nifoun) for $ARCH ==="
+echo "=== Building Nimok Linux 0.2 (Nifox) for $ARCH ==="
 mkdir -p "$WORKDIR" "$ROOTFS" "$ISO_DIR/live" "$ISO_DIR/boot/grub"
 
 # 1. Install host build dependencies
@@ -60,7 +60,7 @@ else
   K_VER=$(ls "$ROOTFS/lib/modules" | head -n 1)
 fi
 
-# 4. Apply Nimok 0.1 (Nifoun) branding, Calamares config, user, and SDDM auto-login
+# 4. Apply Nimok 0.2 (Nifox) branding, Calamares config, user, and SDDM auto-login
 sudo mkdir -p "$ROOTFS/usr/share/pixmaps" "$ROOTFS/usr/share/icons/hicolor/256x256/apps" "$ROOTFS/etc/calamares" "$ROOTFS/etc/sddm.conf.d"
 sudo cp "$REPO_DIR/assets/nimok-logo.png" "$ROOTFS/usr/share/pixmaps/nimok-logo.png"
 sudo cp "$REPO_DIR/assets/nimok-logo.png" "$ROOTFS/usr/share/icons/hicolor/256x256/apps/nimok.png"
@@ -84,7 +84,7 @@ Type=Application
 Version=1.0
 Name=Install Nimok Linux
 GenericName=System Installer
-Comment=Install Nimok Linux 0.1 (Nifoun) to disk
+Comment=Install Nimok Linux 0.2 (Nifox) to disk
 Exec=sudo calamares
 Icon=/usr/share/pixmaps/nimok-logo.png
 Terminal=false
@@ -121,7 +121,7 @@ cat << 'EOT' > "$ISO_DIR/boot/grub/grub.cfg"
 set timeout=5
 set default=0
 
-menuentry "Nimok Linux 0.1 (Nifoun) - Live Desktop & Installer" {
+menuentry "Nimok Linux 0.2 (Nifox) - Live Desktop & Installer" {
     linux /boot/vmlinuz boot=live components quiet splash
     initrd /boot/initrd.img
 }

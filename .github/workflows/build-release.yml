@@ -145,8 +145,8 @@ jobs:
       - name: Upload ISO Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nimok-0.1-nifoun-${{ matrix.arch }}-iso
-          path: nimok-0.1-nifoun-${{ matrix.arch }}.iso
+          name: nimok-0.2-nifox-${{ matrix.arch }}-iso
+          path: nimok-0.2-nifox-${{ matrix.arch }}.iso
 
   release:
     needs: build-iso
@@ -162,13 +162,13 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Nimok Linux 0.1 (Nifoun)
+          name: Nimok Linux 0.2 (Nifox)
           body: |
-            ## Nimok Linux 0.1 (Nifoun)
+            ## Nimok Linux 0.2 (Nifox)
             A Coding and Gaming Distro — available for both **amd64 (x86_64)** and **arm64 (aarch64)**.
 
             - **Live Username:** `nimok`
             - **Live Password:** `nimok`
           files: |
-            nimok-0.1-nifoun-amd64.iso
-            nimok-0.1-nifoun-arm64.iso
+            nimok-0.2-nifox-amd64.iso
+            nimok-0.2-nifox-arm64.iso

@@ -9,10 +9,10 @@ windowPlacement: center
 strings:
     productName:         Nimok Linux
     shortProductName:    Nimok
-    version:             0.1 (Nifoun)
-    shortVersion:        0.1
-    versionedName:       Nimok Linux 0.1 (Nifoun)
-    shortVersionedName:  Nimok 0.1
+    version:             0.2 (Nifox)
+    shortVersion:        0.2
+    versionedName:       Nimok Linux 0.2 (Nifox)
+    shortVersionedName:  Nimok 0.2
     bootloaderEntryName: Nimok
     productUrl:          https://github.com
     supportUrl:          https://github.com/issues
