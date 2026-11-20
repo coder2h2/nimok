@@ -13,17 +13,13 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'packages/**'
-      - 'patches/**'
-      - 'configs/**'
-      - 'scripts/**'
+    paths-ignore:
+      - '.github/**'
+      - 'README.md'
+      - 'LICENSE.md'
+  create:
     tags:
       - 'v*'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -39,7 +35,7 @@ jobs:
           fetch-depth: 2
       - id: filter
         run: |
-          if git diff --name-only HEAD~1 HEAD | grep -qE '^(patches/|configs/|scripts/build-kernel-deb\.sh)'; then
+          if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -qE '^(patches/|configs/|scripts/build-kernel-deb\.sh)'; then
             echo "kernel=true" >> $GITHUB_OUTPUT
           else
             echo "kernel=false" >> $GITHUB_OUTPUT
@@ -47,7 +43,7 @@ jobs:
 
   build-kernel:
     needs: check-changes
-    if: needs.check-changes.outputs.kernel == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.check-changes.outputs.kernel == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -92,7 +88,7 @@ jobs:
           name: nimok-kernel-debs
           path: /tmp/apt-repo
 
-      - name: Preserve existing kernel .debs from apt branch if kernel did not change
+      - name: Preserve existing kernel .debs from apt branch
         if: needs.build-kernel.result == 'skipped'
         run: |
           git fetch origin apt || true
@@ -109,7 +105,7 @@ jobs:
           Origin: Nimok Linux
           Label: Nimok
           Suite: stable
-          Codename: nifoun
+          Codename: nifox
           Architectures: all amd64 arm64
           Components: main
           Description: Official Nimok Linux APT Repository
@@ -122,12 +118,12 @@ jobs:
           git rm -rf . >/dev/null 2>&1 || true
           cp -r /tmp/apt-repo/* .
           git add .
-          git commit -m "Update Nimok APT repository (userspace + kernel)"
+          git commit -m "Update Nimok APT repository"
           git push -f origin apt
 
   build-iso:
     needs: publish-apt-repo
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'create' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
@@ -159,7 +155,7 @@ jobs:
 
   release:
     needs: build-iso
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'create'
     runs-on: ubuntu-latest
     steps:
       - name: Download all built ISOs
