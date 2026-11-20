@@ -5,20 +5,14 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://gnu.org>.
 
-name: Build Nimok Linux ISOs (amd64 & arm64)
+name: Build Nimok APT Repo, Kernel & ISOs
 
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
@@ -26,7 +20,105 @@ permissions:
   contents: write
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      kernel_changed: ${{ steps.filter.outputs.kernel }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: filter
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -qE '^(patches/|configs/|scripts/build-kernel-deb\.sh)'; then
+            echo "kernel=true" >> $GITHUB_OUTPUT
+          else
+            echo "kernel=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-kernel:
+    needs: check-changes
+    if: needs.check-changes.outputs.kernel == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Free disk space & install kernel build deps
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev dwarves debhelper rsync kmod cpio
+
+      - name: Compile patched Nimok kernel .deb
+        run: bash scripts/build-kernel-deb.sh /tmp/kernel-debs
+
+      - name: Upload kernel .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nimok-kernel-debs
+          path: /tmp/kernel-debs/*.deb
+
+  publish-apt-repo:
+    needs: [check-changes, build-kernel]
+    if: always() && (needs.build-kernel.result == 'success' || needs.build-kernel.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Nimok repository
+        uses: actions/checkout@v4
+
+      - name: Install dpkg-dev
+        run: sudo apt-get update && sudo apt-get install -y dpkg-dev
+
+      - name: Build Nimok userspace .deb packages
+        run: |
+          mkdir -p /tmp/apt-repo
+          bash scripts/build-debs.sh /tmp/apt-repo
+
+      - name: Download new kernel .debs if built
+        if: needs.build-kernel.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: nimok-kernel-debs
+          path: /tmp/apt-repo
+
+      - name: Preserve existing kernel .debs from apt branch if kernel did not change
+        if: needs.build-kernel.result == 'skipped'
+        run: |
+          git fetch origin apt || true
+          if git rev-parse --verify origin/apt >/dev/null 2>&1; then
+            git archive origin/apt | tar -x -C /tmp/apt-repo linux-image-*.deb linux-headers-*.deb 2>/dev/null || true
+          fi
+
+      - name: Generate APT index and push to 'apt' branch
+        run: |
+          cd /tmp/apt-repo
+          dpkg-scanpackages . /dev/null > Packages
+          gzip -k -f Packages
+          cat << 'EOT' > Release
+          Origin: Nimok Linux
+          Label: Nimok
+          Suite: stable
+          Codename: nifoun
+          Architectures: all amd64 arm64
+          Components: main
+          Description: Official Nimok Linux APT Repository
+          EOT
+
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@://github.com"
+          git checkout --orphan apt
+          git rm -rf . >/dev/null 2>&1 || true
+          cp -r /tmp/apt-repo/* .
+          git add .
+          git commit -m "Update Nimok APT repository (userspace + kernel)"
+          git push -f origin apt
+
   build-iso:
+    needs: publish-apt-repo
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
