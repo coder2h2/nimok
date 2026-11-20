@@ -66,18 +66,6 @@ sudo cp "$REPO_DIR/assets/nimok-logo.png" "$ROOTFS/usr/share/pixmaps/nimok-logo.
 sudo cp "$REPO_DIR/assets/nimok-logo.png" "$ROOTFS/usr/share/icons/hicolor/256x256/apps/nimok.png"
 sudo cp -r "$REPO_DIR/calamares/"* "$ROOTFS/etc/calamares/"
 
-sudo bash -c "cat << 'EOT' > '$ROOTFS/etc/os-release'
-NAME=\"Nimok\"
-VERSION=\"0.1 (Nifoun)\"
-ID=nimok
-ID_LIKE=debian
-PRETTY_NAME=\"Nimok Linux 0.1 (Nifoun)\"
-LOGO=nimok
-HOME_URL=\"https://github.com\"
-SUPPORT_URL=\"https://github.com/issues\"
-BUG_REPORT_URL=\"https://github.com/issues\"
-EOT"
-
 echo "nimok" | sudo tee "$ROOTFS/etc/hostname"
 sudo chroot "$ROOTFS" useradd -m -G sudo,video,audio,input -s /bin/bash nimok || true
 echo "nimok:nimok" | sudo chroot "$ROOTFS" chpasswd

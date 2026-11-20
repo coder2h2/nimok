@@ -1,0 +1,9 @@
+NAME="Nimok"
+VERSION="0.1 (Nifoun)"
+ID=nimok
+ID_LIKE=debian
+PRETTY_NAME="Nimok Linux 0.1 (Nifoun)"
+LOGO=nimok
+HOME_URL="https://github.com/coder2h2/nimok"
+SUPPORT_URL="https://github.com/coder2h2/nimok/issues"
+BUG_REPORT_URL="https://github.com/coder2h2/nimok/issues"
