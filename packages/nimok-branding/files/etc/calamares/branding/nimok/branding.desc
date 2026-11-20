@@ -1,0 +1,32 @@
+---
+componentName: nimok
+welcomeStyleCalamares: false
+welcomeExpandingLogo: true
+windowExpanding: normal
+windowSize: 800px,580px
+windowPlacement: center
+
+strings:
+    productName:         Nimok Linux
+    shortProductName:    Nimok
+    version:             0.1 (Nifoun)
+    shortVersion:        0.1
+    versionedName:       Nimok Linux 0.1 (Nifoun)
+    shortVersionedName:  Nimok 0.1
+    bootloaderEntryName: Nimok
+    productUrl:          https://github.com
+    supportUrl:          https://github.com/issues
+    knownIssuesUrl:      https://github.com/issues
+
+images:
+    productLogo:         "nimok-logo.png"
+    productIcon:         "nimok-logo.png"
+    productWelcome:      "nimok-logo.png"
+
+slideshow:               "show.qml"
+
+style:
+    SidebarBackground:        "#181825"
+    SidebarText:              "#cdd6f4"
+    SidebarTextCurrent:       "#89b4fa"
+    SidebarBackgroundCurrent: "#313244"

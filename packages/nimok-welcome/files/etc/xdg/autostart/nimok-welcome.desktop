@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Nimok Welcome
+Comment=Welcome to Nimok Linux
+Exec=/usr/bin/nimok-welcome --autostart
+Icon=/usr/share/pixmaps/nimok-logo.png
+Terminal=false
