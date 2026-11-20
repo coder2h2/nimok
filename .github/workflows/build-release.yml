@@ -13,8 +13,17 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'packages/**'
+      - 'patches/**'
+      - 'configs/**'
+      - 'scripts/**'
     tags:
       - 'v*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
